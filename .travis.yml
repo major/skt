@@ -1,12 +1,15 @@
 language: python
 python:
     - "2.7"
+before_install:
+    - pip install codecov
 install:
-    - pip install requests junit_xml beaker-client mock
-    - pip install pylint pycodestyle
+    - pip install requests junit_xml beaker-client mock coverage pylint pycodestyle
 script:
-    - python -m unittest discover tests
-    - pylint tests
+    - coverage run --source skt setup.py test
+    - coverage report -m --omit="*/tests*"
     - pycodestyle .
     - pip install .
     - pip uninstall -y skt
+after_success:
+    - codecov
