@@ -4,9 +4,13 @@ python:
 script:
     # Install skt using pip to ensure dependencies are downloaded correctly.
     - pip install .
+    - pip install codecov
     # Run tests and linters.
     - flake8 --show-source .
     - pylint tests
     - python -m unittest discover tests
+    - coverage run --source skt setup.py test
+    - coverage report -m --omit="*/test*"
+    - codecov
     # Test the uninstallation of skt,
     - pip uninstall -y skt
