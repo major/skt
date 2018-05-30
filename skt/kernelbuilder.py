@@ -97,7 +97,7 @@ class KernelBuilder(object):
 
         return krelease
 
-    def mktgz(self, clean=True, timeout=60 * 60 * 12):
+    def mktgz(self, clean=True, timeout=5):
         """
         Build kernel and modules, after that, pack everything into a tarball.
 
@@ -137,31 +137,25 @@ class KernelBuilder(object):
             make = subprocess.Popen(kernel_build_argv,
                                     stdout=writer,
                                     stderr=subprocess.STDOUT)
-            make_timedout = []
 
-            def stop_process(proc):
-                """
-                Terminate the process with SIGTERM and flag it as timed out.
-                """
-                if proc.poll() is None:
-                    proc.terminate()
-                    make_timedout.append(True)
-            timer = Timer(timeout, stop_process, [make])
+            timer = Timer(timeout, lambda process: process.kill(), [make])
             timer.setDaemon(True)
             timer.start()
-            try:
-                while make.poll() is None:
-                    self.append_and_log2stdout(reader.readlines(), stdout_list)
-                    time.sleep(1)
+
+            while make.poll() is None:
                 self.append_and_log2stdout(reader.readlines(), stdout_list)
-            finally:
-                timer.cancel()
-            if make_timedout:
+                time.sleep(1)
+            self.append_and_log2stdout(reader.readlines(), stdout_list)
+
+            timer.cancel()
+
+            if make.returncode == "-9":
                 raise CommandTimeoutError(
                     "'{}' was taking too long".format(
                         ' '.join(kernel_build_argv)
                     )
                 )
+
             if make.returncode != 0:
                 raise subprocess.CalledProcessError(
                     make.returncode,
